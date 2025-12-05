@@ -50,6 +50,21 @@ export async function POST(req: Request) {
       });
     }
 
+    // Record this play as a MatcherSession for history
+    try {
+      await prisma.matcherSession.create({
+        data: {
+          userId,
+          score,
+          total: matches.length,
+          details: { results },
+        },
+      });
+    } catch (e) {
+      // non-fatal: if history recording fails, continue
+      console.error("Failed to record matcher session:", e);
+    }
+
     return NextResponse.json({
       score,
       totalPoints: scoreRecord.points,

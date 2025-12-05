@@ -11,6 +11,7 @@ export default function StateMatcher() {
   const [matches, setMatches] = useState<{ itemId: string; state: string }[]>(
     []
   );
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [totalPoints, setTotalPoints] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -117,8 +118,8 @@ export default function StateMatcher() {
       {!result && (
         <>
           <div style={{ display: "flex", gap: 20, marginTop: 20 }}>
-            {/* Items to match (left side) */}
-            <div style={{ flex: 1 }}>
+            {/* Items to Match (left side) */}
+            <div style={{ flex: 1, maxHeight: 420, overflowY: "auto" }}>
               <h3>Items to Match</h3>
               {MATCHER_ITEMS.map((item) => {
                 const match = matches.find((m) => m.itemId === item.id);
@@ -137,7 +138,15 @@ export default function StateMatcher() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       backgroundColor: match?.state ? "#e3f2fd" : "#f5f5f5",
+                      cursor: "pointer",
+                      borderColor:
+                        activeItemId === item.id ? "#0070f3" : undefined,
+                      boxShadow:
+                        activeItemId === item.id
+                          ? "0 4px 12px rgba(0,112,243,0.12)"
+                          : undefined,
                     }}
+                    onClick={() => setActiveItemId(item.id)}
                   >
                     <div>
                       <strong>{item.name}</strong>
@@ -165,6 +174,26 @@ export default function StateMatcher() {
                   key={state}
                   draggable
                   onDragStart={(e) => handleDragStart(e, state)}
+                  onClick={() => {
+                    // If an item is active, assign to it, otherwise assign to first empty
+                    if (activeItemId) {
+                      setMatches((prev) =>
+                        prev.map((m) =>
+                          m.itemId === activeItemId ? { ...m, state } : m
+                        )
+                      );
+                      setActiveItemId(null);
+                    } else {
+                      const firstEmpty = matches.find((m) => !m.state);
+                      if (firstEmpty) {
+                        setMatches((prev) =>
+                          prev.map((m) =>
+                            m.itemId === firstEmpty.itemId ? { ...m, state } : m
+                          )
+                        );
+                      }
+                    }
+                  }}
                   style={{
                     display: "block",
                     width: "100%",

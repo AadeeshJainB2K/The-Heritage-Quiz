@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { MONUMENTS, getMapsLink } from "../../lib/monument-locations";
 
 export default function MonumentIdentificationPage() {
   const [preview, setPreview] = useState<string | null>(null);
@@ -21,18 +22,17 @@ export default function MonumentIdentificationPage() {
     setLoading(true);
     setResult(null);
     setError(null);
+
     try {
       const res = await fetch("/api/monument", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: preview }),
       });
+
       const data = await res.json();
-      if (data?.error) {
-        setError(data.error);
-      } else {
-        setResult(data.monument);
-      }
+      if (data.error) setError(data.error);
+      else setResult(data.monument);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -46,11 +46,23 @@ export default function MonumentIdentificationPage() {
     setError(null);
   }
 
+  // Try to find the monument in our database for Google Maps link
+  const identifiedMonument = result
+    ? MONUMENTS.find((m) =>
+        m.name
+          .toLowerCase()
+          .includes((result["Monument name"] || "").toLowerCase())
+      )
+    : null;
+
   return (
     <main style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
       <h1>Monument Identification</h1>
-      <p>Upload or take a photo of an Indian monument to identify it using AI.</p>
+      <p>
+        Upload or take a photo of an Indian monument to identify it using AI.
+      </p>
 
+      {/* UPLOAD AREA */}
       {!result && !error && (
         <>
           <div style={{ marginTop: 20 }}>
@@ -68,6 +80,7 @@ export default function MonumentIdentificationPage() {
             >
               Choose Image
             </label>
+
             <input
               id="file-input"
               type="file"
@@ -85,144 +98,134 @@ export default function MonumentIdentificationPage() {
                 alt="preview"
                 style={{
                   maxWidth: "100%",
-                  height: "auto",
                   borderRadius: 8,
                   border: "2px solid #ddd",
                 }}
               />
-              <div style={{ marginTop: 16 }}>
-                <button
-                  onClick={identify}
-                  disabled={loading}
-                  style={{
-                    padding: "12px 24px",
-                    backgroundColor: "#28a745",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 4,
-                    cursor: loading ? "not-allowed" : "pointer",
-                    fontWeight: "bold",
-                    fontSize: 16,
-                  }}
-                >
-                  {loading ? "Identifying..." : "Identify Monument"}
-                </button>
-              </div>
+
+              <button
+                onClick={identify}
+                disabled={loading}
+                style={{
+                  marginTop: 16,
+                  padding: "12px 24px",
+                  backgroundColor: "#28a745",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  fontWeight: "bold",
+                }}
+              >
+                {loading ? "Identifying..." : "Identify"}
+              </button>
             </div>
           )}
         </>
       )}
 
+      {/* ERROR */}
       {error && (
-        <div
-          style={{
-            marginTop: 24,
-            padding: 16,
-            backgroundColor: "#fff3cd",
-            border: "2px solid #ff9800",
-            borderRadius: 8,
-            color: "#666",
-          }}
-        >
-          <h3 style={{ margin: "0 0 8px 0", color: "#ff9800" }}>Error</h3>
-          <p style={{ margin: 0 }}>{error}</p>
-          <button
-            onClick={reset}
-            style={{
-              marginTop: 12,
-              padding: "8px 16px",
-              backgroundColor: "#ff9800",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-            }}
-          >
-            Try Another Image
-          </button>
+        <div style={{ marginTop: 20, color: "red" }}>
+          <p>{error}</p>
+          <button onClick={reset}>Try Again</button>
         </div>
       )}
 
       {result && (
-        <div
-          style={{
-            marginTop: 24,
-            padding: 20,
-            backgroundColor: "#f0f4ff",
-            border: "2px solid #0070f3",
-            borderRadius: 8,
-          }}
-        >
-          <h2 style={{ margin: "0 0 16px 0", color: "#0070f3" }}>
+        <div className="mt-6 p-6 bg-blue-50 border-2 border-blue-500 rounded-xl shadow">
+          {/* 1. MONUMENT NAME */}
+          <h2 className="text-2xl font-bold text-blue-600">
             {result["Monument name"] || "Monument Identified"}
           </h2>
 
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 12 }}>
-              <strong style={{ color: "#0070f3" }}>Location:</strong>
-              <p style={{ margin: "4px 0 0 0", fontSize: 16 }}>
-                {result["Location/State in India"]}
-              </p>
-            </div>
+          {/* 2. CONFIDENCE */}
+          <div className="mt-4">
+            <p className="font-semibold text-blue-600">Confidence:</p>
 
-            <div style={{ marginBottom: 12 }}>
-              <strong style={{ color: "#0070f3" }}>Confidence:</strong>
+            <div className="w-full bg-gray-300 rounded h-5 mt-1 overflow-hidden">
               <div
-                style={{
-                  marginTop: 4,
-                  width: "100%",
-                  backgroundColor: "#ddd",
-                  borderRadius: 4,
-                  overflow: "hidden",
-                  height: 20,
-                }}
+                className="bg-green-600 h-full text-white text-xs flex items-center justify-center font-bold"
+                style={{ width: `${result["Confidence"] || 0}%` }}
               >
-                <div
-                  style={{
-                    width: `${(result.Confidence || 0)}%`,
-                    backgroundColor: "#28a745",
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    fontSize: 12,
-                    fontWeight: "bold",
-                  }}
-                >
-                  {result.Confidence}%
-                </div>
+                {result["Confidence"] || 0}%
               </div>
-            </div>
-
-            <div>
-              <strong style={{ color: "#0070f3" }}>Description:</strong>
-              <p style={{ margin: "8px 0 0 0", lineHeight: 1.6 }}>
-                {result["Brief description"]}
-              </p>
             </div>
           </div>
 
+          {/* 3. LOCATION / STATE */}
+          <p className="mt-4 text-lg">
+            <span className="font-semibold text-blue-600">
+              Location / State:
+            </span>{" "}
+            {result["Location/State in India"] || "Unknown"}
+          </p>
+
+          {/* 4. DESCRIPTION */}
+          <div className="mt-4">
+            <p className="font-semibold text-blue-600">Description:</p>
+            <p className="mt-1 leading-relaxed">
+              {result["Brief description"] || "No description available"}
+            </p>
+          </div>
+
+          {/* 5. GOOGLE MAPS LINK */}
+          {identifiedMonument && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 12,
+                backgroundColor: "#fff",
+                border: "1px solid #ccc",
+                borderRadius: 6,
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 8px 0",
+                  fontWeight: "bold",
+                  color: "#0070f3",
+                }}
+              >
+                🗺️ Virtually Visit This Monument
+              </p>
+              <a
+                href={getMapsLink(identifiedMonument)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-block",
+                  padding: "8px 16px",
+                  background: "#FF6B6B",
+                  color: "#fff",
+                  borderRadius: 4,
+                  textDecoration: "none",
+                  fontWeight: "bold",
+                }}
+              >
+                View on Google Maps →
+              </a>
+              <p style={{ margin: "8px 0 0 0", fontSize: 12, color: "#666" }}>
+                {identifiedMonument.location}, {identifiedMonument.state}
+              </p>
+            </div>
+          )}
+
           <button
             onClick={reset}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: "#0070f3",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
+            className="mt-6 px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
           >
             Identify Another Monument
           </button>
-        </div>
-      )}
-    </main>
-  );
-}
-          </pre>
+
+          <details className="mt-4">
+            <summary className="cursor-pointer text-blue-700">
+              Raw response
+            </summary>
+            <pre className="bg-white p-3 mt-2 rounded border text-sm">
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          </details>
         </div>
       )}
     </main>
